@@ -11,8 +11,8 @@ COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 # Build application
 COPY . .
-RUN cargo build --release --bin rust-template
+RUN cargo build --release --bin {{crate_name}}
 
-FROM gcr.io/distroless/cc-debian12:debug AS runtime
-COPY --from=builder /app/target/release/rust-template /usr/local/bin/
-ENTRYPOINT ["/usr/local/bin/rust-template"]
+FROM gcr.io/distroless/cc-debian12 AS runtime
+COPY --from=builder /app/target/release/{{crate_name}} /usr/local/bin/
+ENTRYPOINT ["/usr/local/bin/{{crate_name}}"]
