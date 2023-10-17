@@ -1,8 +1,6 @@
-use std::time::Duration;
 
 fn main() {
     println!("Hello, world!");
-    tracing_example::main();
 }
 
 /// Recipe 1:
@@ -61,6 +59,7 @@ mod axum_example {
         format!("Hello {path}")
     }
 
+    /// This uses serde for serializing and deserializing this struct more info on serde.rs
     #[derive(Debug, Serialize, Deserialize)]
     struct MyJson {
         foo: String,
@@ -99,7 +98,7 @@ mod axum_example {
 /// Logging using tracing
 /// Requires `cargo add tracing`
 /// And `cargo add tracing-subscriber -F env-filter`
-// #[cfg(never)]
+#[cfg(never)]
 mod tracing_example {
     use tracing_subscriber::{EnvFilter, util::SubscriberInitExt};
     use tracing::{info, warn, error, debug};
@@ -123,5 +122,48 @@ mod tracing_example {
         // This crate is capable of a *lot* more than these 4 macros but 90% of the time this is all you need
         warn!("Warn");
         error!("Error")
+    }
+}
+
+/// Recipe 4:
+/// Http client
+/// Requires `cargo add reqwest -F json`
+/// Requires `cargo add serde -F derive`
+#[cfg(never)]
+mod reqwest_example {
+    use reqwest::Client;
+    use serde::{Deserialize, Serialize};
+
+    /// This uses serde for serializing and deserializing this struct more info on serde.rs
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct SerdeTestStruct {
+        foo: String,
+        bar: Vec<u32>
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct ResponseJson {
+        json: SerdeTestStruct
+    }
+    
+    /// To await this function you will need to use tokio at some point like in the axum example as
+    /// async functions can only be awaited in other async functions
+    pub async fn client_example() {
+        // This client should not be created every time this function is called
+        // When using this client either clone an existing client or put the client in a
+        // once_cell::sync::Lazy like in the clap example 
+        let client = Client::new();
+        let data = SerdeTestStruct {
+            foo: "Foo".into(),
+            bar: vec![2, 3, 4],
+        };
+        let response_json = client.get("https://httpbin.org/anything")
+            .json(&data) // You may add more request parameters with the builder pattern
+            .send().await // Send the request and wait for the response
+            .unwrap() // Here we unwrap the first error that can happen. This error ususally happens when the url cant be reached or resolved to an ip.
+            .json::<ResponseJson>() // Now we get the response as some untyped
+            .await
+            .unwrap();
+        assert_eq!(response_json.json, data);
     }
 }
