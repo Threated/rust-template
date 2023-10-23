@@ -15,7 +15,8 @@ jobs:
     uses: samply/github-workflows/.github/workflows/docker-ci.yml@main
     with:
       # The Docker Hub Repository you want eventually push to, e.g samply/share-client
-      image-name: "samply/{{crate_name}}"
+      image-name: "samply/{{project-name}}"
+{% raw %}
       # image-tag-suffix: ${{ matrix.features && format('-{0}', matrix.features) }}
       # Define special prefixes for docker tags. They will prefix each images tag.
       # image-tag-prefix: "foo"
@@ -35,3 +36,4 @@ jobs:
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+{% endraw %}

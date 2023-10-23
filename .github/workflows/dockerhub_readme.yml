@@ -1,3 +1,4 @@
+{% raw %}
 name: Update Docker Hub Readme
 on:
   push:
@@ -19,3 +20,4 @@ jobs:
           readme: "./README.md"
           replace_pattern: "](./"
           replace_with: "](https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/"
+{% endraw %}
