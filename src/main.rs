@@ -1,4 +1,3 @@
-
 fn main() {
     println!("Hello, world!");
 }
@@ -29,27 +28,23 @@ mod clap_example {
 /// Http server using axum
 /// This example requires:
 /// `cargo add axum`
-/// `cargo add tokio -F macros -F rt-multi-thread -F signal`
+/// `cargo add tokio -F macros -F rt-multi-thread -F signal -F net`
 /// `cargo add serde -F derive`
 #[cfg(never)]
 mod axum_example {
     use axum::{extract::Path, http::StatusCode, routing::get, Json, Router};
     use serde::{Deserialize, Serialize};
+    use tokio::net::TcpListener;
 
     // This macro allows out main function to be async
     #[tokio::main]
     pub async fn main() {
-        axum::Server::bind(&"0.0.0.0:8080".parse().unwrap())
-            .serve(
-                Router::new()
-                    .route("/", get(return_json).post(decode_json))
-                    .route(
-                        "/hello/:name",
-                        get(greet),
-                    )
-                    .into_make_service(),
-            )
-            // Fast shutdown on crl_c
+        let app = Router::new()
+            .route("/", get(return_json).post(decode_json))
+            .route("/hello/:name", get(greet));
+        // Fast shutdown on crl_c
+        let listener = TcpListener::bind("0.0.0.0:8080").await.unwrap();
+        axum::serve(listener, app)
             .with_graceful_shutdown(async { tokio::signal::ctrl_c().await.unwrap() })
             .await
             .unwrap();
@@ -100,8 +95,8 @@ mod axum_example {
 /// And `cargo add tracing-subscriber -F env-filter`
 #[cfg(never)]
 mod tracing_example {
-    use tracing_subscriber::{EnvFilter, util::SubscriberInitExt};
-    use tracing::{info, warn, error, debug};
+    use tracing::{debug, error, info, warn};
+    use tracing_subscriber::{util::SubscriberInitExt, EnvFilter};
 
     pub fn main() {
         // Thats all you need to have basic logging the log level is configurable via the RUST_LOG env var
@@ -109,7 +104,7 @@ mod tracing_example {
             .with_env_filter(EnvFilter::from_default_env())
             .finish()
             .init();
-        
+
         log_wherever_you_want();
     }
 
@@ -138,28 +133,30 @@ mod reqwest_example {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     struct SerdeTestStruct {
         foo: String,
-        bar: Vec<u32>
+        bar: Vec<u32>,
     }
 
     #[derive(Debug, Deserialize)]
     struct ResponseJson {
-        json: SerdeTestStruct
+        json: SerdeTestStruct,
     }
-    
+
     /// To await this function you will need to use tokio at some point like in the axum example as
     /// async functions can only be awaited in other async functions
     pub async fn client_example() {
         // This client should not be created every time this function is called
         // When using this client either clone an existing client or put the client in a
-        // once_cell::sync::Lazy like in the clap example 
+        // once_cell::sync::Lazy like in the clap example
         let client = Client::new();
         let data = SerdeTestStruct {
             foo: "Foo".into(),
             bar: vec![2, 3, 4],
         };
-        let response_json = client.get("https://httpbin.org/anything")
+        let response_json = client
+            .get("https://httpbin.org/anything")
             .json(&data) // You may add more request parameters with the builder pattern
-            .send().await // Send the request and wait for the response
+            .send()
+            .await // Send the request and wait for the response
             .unwrap() // Here we unwrap the first error that can happen. This error ususally happens when the url cant be reached or resolved to an ip.
             .json::<ResponseJson>() // Now we get the response as some untyped
             .await
